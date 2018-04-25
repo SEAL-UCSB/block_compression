@@ -6,6 +6,8 @@ import numpy as np
 
 from compress import blocksparse
 
+__all__ = ['BlocksparseConv', 'BlocksparseLinear']
+
 class BlocksparseConv(nn.Module):
     def __init__(self, conv2d, block_sizes, pruning_rate):
         super(BlocksparseConv, self).__init__()
