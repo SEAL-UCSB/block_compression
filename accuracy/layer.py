@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from torch.nn.parameter import Parameter
 from torch.nn import functional as F
+import numpy as np
 
 from compress import blocksparse
 
@@ -22,14 +23,14 @@ class BlocksparseConv(nn.Module):
         self.output_padding = conv2d.output_padding
         self.groups = conv2d.groups
         
-        self.weight = Paramater(conv2d.weight.data)
-        if conv2d.bias:
+        self.weight = Parameter(conv2d.weight.data)
+        if conv2d.bias is not None:
             self.bias = Parameter(conv2d.bias.data)
         else:
             self.register_parameter('bias', None)
 
         self.orders, self.mask = blocksparse(self.weight.data.numpy(), block_sizes, pruning_rate)
-        self.mask = torch.from_numpy(self.mask)
+        self.mask = torch.from_numpy(self.mask.astype(np.float32))
 
     def forward(x):
         weight = self.weight * self.mask
@@ -37,7 +38,7 @@ class BlocksparseConv(nn.Module):
 
 
 class BlocksparseLinear(nn.Module):
-    def __init__(self, linear, block_size, pruning_rate):
+    def __init__(self, linear, block_sizes, pruning_rate):
         super(BlocksparseLinear, self).__init__()
         
         self.block_sizes = block_sizes
@@ -46,13 +47,13 @@ class BlocksparseLinear(nn.Module):
         self.in_features = linear.in_features
         self.out_features = linear.out_features
         self.weight = Parameter(linear.weight.data)
-        if linear.bias:
+        if linear.bias is not None:
             self.bias = Parameter(linear.bias.data)
         else:
             self.register_parameter('bias', None)
 
         self.orders, self.mask = blocksparse(self.weight.data.numpy(), block_sizes, pruning_rate)
-        self.mask = torch.from_numpy(self.mask)
+        self.mask = torch.from_numpy(self.mask.astype(np.float32))
 
     def forward(x):
         weight = self.weight * self.mask

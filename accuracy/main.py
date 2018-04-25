@@ -14,6 +14,7 @@ class BlocksparseModel(nn.Module):
         features = []
         sparse_index = 0
         for layer in model.features:
+            print("Converting layer %s" % str(layer))
             if type(layer) is nn.Conv2d:
                 features.append(BlocksparseConv(layer, block_sizes[sparse_index], pruning_rates[sparse_index]))
                 sparse_index += 1
@@ -22,6 +23,7 @@ class BlocksparseModel(nn.Module):
 
         classifier = []
         for layer in model.classifier:
+            print("Converting layer %s" % str(layer))
             if type(layer) is nn.Linear:
                 classifier.append(BlocksparseLinear(layer, block_sizes[sparse_index], pruning_rates[sparse_index]))
                 sparse_index += 1
@@ -38,21 +40,21 @@ class BlocksparseModel(nn.Module):
         return y
 
 block_sizes = [
-    (0, 0, 16, 128), (0, 0, 16, 128), # conv1
-    (0, 0, 16, 128), (0, 0, 16, 128), # conv2
-    (0, 0, 16, 128), (0, 0, 16, 128), (0, 0, 16, 128), # conv3
-    (0, 0, 16, 128), (0, 0, 16, 128), (0, 0, 16, 128), # conv4
-    (0, 0, 16, 128), (0, 0, 16, 128), (0, 0, 16, 128), # conv5
-    (128, 128), (128, 128), # fc
+    (0, 128, 0, 0), (16, 128, 0, 0), # conv1
+    (16, 128, 0, 0), (16, 128, 0, 0), # conv2
+    (16, 128, 0, 0), (16, 128, 0, 0), (16, 128, 0, 0), # conv3
+    (16, 128, 0, 0), (16, 128, 0, 0), (16, 128, 0, 0), # conv4
+    (16, 128, 0, 0), (16, 128, 0, 0), (16, 128, 0, 0), # conv5
+    (128, 128), (128, 128), (128, 100) # fc
 ]
 
-pruning_rate = [
+pruning_rates = [
     0.4, 0.5,
     0.5, 0.5, 
     0.5, 0.5, 0.5,
     0.5, 0.5, 0.5,
     0.5, 0.5, 0.5,
-    0.7, 0.7
+    0.7, 0.7, 0.3
 ]
 
 model = models.vgg16(pretrained=True)

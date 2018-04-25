@@ -37,6 +37,7 @@ def blocksparse(x, block_sizes, pruning_rate):
     prev_pruned_sum = np.sum(x_)
 
     ## EM iteration
+    print("Begin EM algorithm: block_sizes %s, pruning_rate %f" % (str(block_sizes), pruning_rate))
 
     while True:
         ## E step: choose blocks to be pruned
@@ -50,6 +51,8 @@ def blocksparse(x, block_sizes, pruning_rate):
         block_mask = np.zeros(shape=block_nums, dtype=bool)
         for indices in zip(*(np.unravel_index(block_sums.argsort(axis=None)[:num_pruned_blocks], dims=block_nums))):
             block_mask[indices] = True
+
+        print("=> E-step: %f" % np.sort(block_sums.flatten())[:num_pruned_blocks].sum())
 
         ## M step: generate a new shuffle order
         for axis in range(len(dim_sizes_)):
@@ -79,7 +82,7 @@ def blocksparse(x, block_sizes, pruning_rate):
         for indices in itertools.product(*(tuple(range(bn)) for bn in block_nums)):
             if block_mask[indices]:
                 pruned_sum += x_[tuple(slice(i*bs, (i+1)*bs) for i, bs in zip(indices, block_sizes))].sum()
-        print(pruned_sum)
+        print("=> M-step: %f" % pruned_sum)
         if pruned_sum >= prev_pruned_sum:
             break
         else:
