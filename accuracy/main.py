@@ -6,6 +6,7 @@ import time
 import torch
 import torch.nn as nn
 import torch.nn.parallel
+from torch.autograd import Variable
 import torch.backends.cudnn as cudnn
 import torch.distributed as dist
 import torch.optim 
@@ -25,13 +26,14 @@ parser.add_argument('--arch', '-a', metavar='ARCH', default='vgg16', choices=mod
 parser.add_argument('-j', '--workers', default=4, type=int, metavar='N', help='number of data loading workers')
 parser.add_argument('--epochs', default=90, type=int, metavar='N', help='number of total epochs to run')
 parser.add_argument('--start-epoch', default=0, type=int, metavar='N', help='manual epoch number')
-parser.add_argument('--batch-size', '-bs', default=256, type=int, metavar='N', help='mini-batch size')
+parser.add_argument('--batch-size', '-bs', default=64, type=int, metavar='N', help='mini-batch size')
 parser.add_argument('--lr', '--learning-rate', default=0.1, type=float, metavar='LR', help='initial learning rate')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M', help='momentum')
 parser.add_argument('--weight-decay', '--wd', default=1e-4, type=float, metavar='W', help='weight decay')
 parser.add_argument('--print-freq', '-p', default=10, type=int, metavar='N', help='print frequency')
 parser.add_argument('--resume', default='', type=str, metavar='PATH', help='path to the latest checkpoint')
 parser.add_argument('--evaluate', '-e', dest='evaluate', action='store_true', help='only evaluate model on validation set')
+parser.add_argument('--prefix', default='default', type=str, metavar='PREFIX', help='prefix of the checkpoints and best models')
 
 args = parser.parse_args()
 best_prec1 = 0
@@ -40,8 +42,7 @@ def main():
     print("=> load pre-trained model %s" % args.arch)
     model = models.__dict__[args.arch](pretrained=True)
     print("=> create sparse model")
-    model = BlocksparseModel(model, configuration[args.arch].block_sizes, configuration[args.arch].pruning_rates)
-    model = torch.nn.DataParallel(model).cuda()
+    model = BlocksparseModel(model, configuration[args.arch].block_sizes, configuration[args.arch].pruning_rates).cuda(0)
  
     # define loss function and optimizer
     criterion = nn.CrossEntropyLoss().cuda()
@@ -96,7 +97,7 @@ def main():
         prec1 = validate(val_loader, model, criterion)
 
         # save best and checkpoint
-        checkpoint_fn = 'checkpoint.pth.tar'
+        checkpoint_fn = '%s-checkpoint.pth.tar' % args.prefix
         is_best = prec1 > best_prec1
         best_prec1 = max(prec1, best_prec1)
         torch.save({
@@ -107,11 +108,10 @@ def main():
             'optimizer': optimizer.state_dict()},
             checkpoint_fn)
         if is_best:
-            shutil.copyfile(checkpoint_fn, 'model_best.pth.tar')
+            shutil.copyfile(checkpoint_fn, '%s-model_best.pth.tar' % args.prefix)
 
 def train(train_loader, model, criterion, optimizer, epoch):
     batch_time = AverageMeter()
-    data_time = AverageMeter()
     losses = AverageMeter()
     top1 = AverageMeter()
     top5 = AverageMeter()
@@ -120,15 +120,14 @@ def train(train_loader, model, criterion, optimizer, epoch):
 
     end = time.time()
     for i, (x, y) in enumerate(train_loader):
-        data_time.update(time.time() - end)
-        
-        y = y.cuda(non_block=True)
+        x = Variable(x.cuda())
+        y = Variable(y.cuda())
         y_ = model(x)
 
         loss = criterion(y_, y)
         prec1, prec5 = accuracy(y_, y, topk=(1, 5))
         
-        losses.update(loss.item(), x.size(0))
+        losses.update(loss.data, x.size(0))
         top1.update(prec1[0], x.size(0))
         top5.update(prec5[0], x.size(0))
 
@@ -137,13 +136,12 @@ def train(train_loader, model, criterion, optimizer, epoch):
         optimizer.step()
 
         batch_time.update(time.time() - end)
-        end = time.time
+        end = time.time()
 
         if i % args.print_freq == 0:
             print(
                 "Epoch: [%d][%d/%d]\t" % (epoch, i, len(train_loader)) + \
                 "Time %0.3f (%0.3f)\t" % (batch_time.val, batch_time.avg) + \
-                "Data %0.3f (%0.3f)\t" % (data_time.val, data_time.avg) + \
                 "Loss %0.4f (%0.4f)\t" % (losses.val, losses.avg) + \
                 "Prec@1 %0.3f (%0.3f)\t" % (top1.val, top1.avg) + \
                 "Prec@5 %0.3f (%0.3f)\t" % (top5.val, top5.avg))
@@ -159,13 +157,14 @@ def validate(val_loader, model, criterion):
     with torch.no_grad():
         end = time.time()
         for i, (x, y) in enumerate(val_loader):
-            y = y.cuda(non_blocking=True)
+            x = Variable(x.cuda())
+            y = Variable(y.cuda())
             y_ = model(x)
 
             loss = criterion(y_, y)
             prec1, prec5 = accuracy(y_, y, topk=(1, 5))
             
-            losses.update(loss.item(), x.size(0))
+            losses.update(loss.data, x.size(0))
             top1.update(prec1[0], x.size(0))
             top5.update(prec5[0], x.size(0))
             batch_time.update(time.time() - end)
@@ -209,7 +208,7 @@ class AverageMeter(object):
         self.sum = 0
         self.count = 0
 
-    def update(self, vale, n=1):
+    def update(self, val, n=1):
         self.val = val
         self.sum += val * n
         self.count += n
