@@ -39,6 +39,7 @@ args = parser.parse_args()
 best_prec1 = 0
 
 def main():
+    global best_prec1
     print("=> load pre-trained model %s" % args.arch)
     model = models.__dict__[args.arch](pretrained=True)
     print("=> create sparse model")
