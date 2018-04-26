@@ -22,7 +22,7 @@ model_names = configuration.keys()
 
 parser = argparse.ArgumentParser(description='Fine-tuning for deep block compression')
 parser.add_argument('data', metavar='DIR', help='Path to dataset')
-parser.add_argument('--arch', '-a', metavar='ARCH', default='vgg16', choices=model_names, help='model architecture: ' + ' | '.join(model_names) + ' (default: vgg16)')
+parser.add_argument('--arch', '-a', metavar='ARCH', default='vgg16_bn', choices=model_names, help='model architecture: ' + ' | '.join(model_names) + ' (default: vgg16_bn)')
 parser.add_argument('-j', '--workers', default=4, type=int, metavar='N', help='number of data loading workers')
 parser.add_argument('--epochs', default=90, type=int, metavar='N', help='number of total epochs to run')
 parser.add_argument('--start-epoch', default=0, type=int, metavar='N', help='manual epoch number')

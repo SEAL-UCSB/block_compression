@@ -22,3 +22,5 @@ wheels/
 *.egg
 MANIFEST
 
+# data
+*.tar
