@@ -34,6 +34,7 @@ parser.add_argument('--print-freq', '-p', default=10, type=int, metavar='N', hel
 parser.add_argument('--resume', default='', type=str, metavar='PATH', help='path to the latest checkpoint')
 parser.add_argument('--evaluate', '-e', dest='evaluate', action='store_true', help='only evaluate model on validation set')
 parser.add_argument('--prefix', default='default', type=str, metavar='PREFIX', help='prefix of the checkpoints and best models')
+parser.add_argument('--lr-epoch', default=10, type=int, metavar='N', help='epochs to reduce the learning rate')
 
 args = parser.parse_args()
 best_prec1 = 0
@@ -90,7 +91,7 @@ def main():
 
     for epoch in range(args.start_epoch, args.epochs):
         # adjust learning rate
-        lr = args.lr * (0.1 ** (epoch // 30))
+        lr = args.lr * (0.1 ** (epoch // args.lr_epochs))
         for param_group in optimizer.param_groups:
             param_group['lr'] = lr
 
