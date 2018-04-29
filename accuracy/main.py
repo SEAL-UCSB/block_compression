@@ -1,14 +1,16 @@
 import argparse
+from collections import namedtuple
+import json
 import os
 import shutil
 import time
 
 import torch
-import torch.nn as nn
-import torch.nn.parallel
 from torch.autograd import Variable
 import torch.backends.cudnn as cudnn
 import torch.distributed as dist
+import torch.nn as nn
+import torch.nn.parallel
 import torch.optim 
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
@@ -16,13 +18,12 @@ import torchvision.models as models
 
 from sparselayer import BlocksparseConv, BlocksparseLinear
 from sparsemodel import BlocksparseModel
-from config import configuration
 
-model_names = configuration.keys()
 
 parser = argparse.ArgumentParser(description='Fine-tuning for deep block compression')
 parser.add_argument('data', metavar='DIR', help='Path to dataset')
-parser.add_argument('--arch', '-a', metavar='ARCH', default='vgg16_bn', choices=model_names, help='model architecture: ' + ' | '.join(model_names) + ' (default: vgg16_bn)')
+parser.add_argument('config', metavar='CONF', help='Configuration file')
+parser.add_argument('--arch', '-a', metavar='ARCH', default='vgg16_bn', help='model architecture')
 parser.add_argument('-j', '--workers', default=4, type=int, metavar='N', help='number of data loading workers')
 parser.add_argument('--epochs', default=90, type=int, metavar='N', help='number of total epochs to run')
 parser.add_argument('--start-epoch', default=0, type=int, metavar='N', help='manual epoch number')
@@ -36,7 +37,13 @@ parser.add_argument('--evaluate', '-e', dest='evaluate', action='store_true', he
 parser.add_argument('--prefix', default='default', type=str, metavar='PREFIX', help='prefix of the checkpoints and best models')
 parser.add_argument('--lr-epochs', default=10, type=int, metavar='N', help='epochs to reduce the learning rate')
 
+
 args = parser.parse_args()
+Config = namedtuple('Config', ['block_sizes', 'pruning_rates'])
+with open(args.config, 'r') as f:
+    configuration = json.load(f)
+configuration = {k:Config(**v) for k, v in configuration.items()}
+
 best_prec1 = 0
 
 def main():
