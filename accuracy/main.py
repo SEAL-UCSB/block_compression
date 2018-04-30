@@ -51,7 +51,11 @@ def main():
     print("=> load pre-trained model %s" % args.arch)
     model = models.__dict__[args.arch](pretrained=True)
     print("=> create sparse model")
-    model = BlocksparseModel(model, configuration[args.arch].block_sizes, configuration[args.arch].pruning_rates).cuda(0)
+    model = BlocksparseModel(model, configuration[args.arch].block_sizes, configuration[args.arch].pruning_rates)
+    if torch.cuda.device_count() > 1:
+        print("Let's use", torch.cuda.device_count(), "GPUs!")
+        model = nn.DataParallel(model)
+    model.cuda(0)
  
     # define loss function and optimizer
     criterion = nn.CrossEntropyLoss().cuda()
