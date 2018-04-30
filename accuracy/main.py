@@ -28,6 +28,7 @@ parser.add_argument('-j', '--workers', default=4, type=int, metavar='N', help='n
 parser.add_argument('--epochs', default=90, type=int, metavar='N', help='number of total epochs to run')
 parser.add_argument('--start-epoch', default=0, type=int, metavar='N', help='manual epoch number')
 parser.add_argument('--batch-size', '-bs', default=64, type=int, metavar='N', help='mini-batch size')
+parser.add_argument('--batch-iter', default=1, type=int, metavar='N', help='finish one mini-batch in many iteration to save memory')
 parser.add_argument('--lr', '--learning-rate', default=0.1, type=float, metavar='LR', help='initial learning rate')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M', help='momentum')
 parser.add_argument('--weight-decay', '--wd', default=1e-4, type=float, metavar='W', help='weight decay')
@@ -86,14 +87,14 @@ def main():
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             normalizer])),
-        batch_size=args.batch_size, shuffle=True, num_workers=args.workers, pin_memory=True)
+        batch_size=args.batch_size / args.batch_iter, shuffle=True, num_workers=args.workers, pin_memory=True)
     val_loader = torch.utils.data.DataLoader(
         datasets.ImageFolder(valdir, transforms.Compose([
             transforms.Resize(256),
             transforms.CenterCrop(224),
             transforms.ToTensor(),
             normalizer])),
-        batch_size=args.batch_size, shuffle=False, num_workers=args.workers, pin_memory=True)
+        batch_size=args.batch_size / args.batch_iter, shuffle=False, num_workers=args.workers, pin_memory=True)
 
     # optional evaluate only
     if args.evaluate:
@@ -143,10 +144,13 @@ def train(train_loader, model, criterion, optimizer, epoch):
         losses.update(loss.data, x.size(0))
         top1.update(prec1[0], x.size(0))
         top5.update(prec5[0], x.size(0))
-
-        optimizer.zero_grad()
+        
+        # accumulate multiple iter for one batch
+        if i % args.batch_iter == 0:
+            optimizer.zero_grad()
         loss.backward()
-        optimizer.step()
+        if i % args.batch_iter == 0:
+            optimizer.step()
 
         batch_time.update(time.time() - end)
         end = time.time()
