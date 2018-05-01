@@ -32,8 +32,8 @@ class BlocksparseConv(nn.Module):
         else:
             self.register_parameter('bias', None)
 
-        orders, mask = blocksparse(self.weight.data.numpy(), block_sizes, pruning_rate)
-        mask = Variable(torch.from_numpy(mask.astype(np.float32)))
+        orders, mask = blocksparse(self.weight.data, block_sizes, pruning_rate)
+        mask = Variable(mask)
         self.register_buffer('mask', mask)
 
     def forward(self, x):
@@ -56,8 +56,8 @@ class BlocksparseLinear(nn.Module):
         else:
             self.register_parameter('bias', None)
 
-        orders, mask = blocksparse(self.weight.data.numpy(), block_sizes, pruning_rate)
-        mask = Variable(torch.from_numpy(mask.astype(np.float32)))
+        orders, mask = blocksparse(self.weight.data, block_sizes, pruning_rate)
+        mask = Variable(mask)
         self.register_buffer('mask', mask)
 
     def forward(self, x):

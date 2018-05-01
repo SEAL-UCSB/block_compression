@@ -1,5 +1,6 @@
-import numpy as np
 import itertools
+import torch
+import numpy as np
 
 __all__ = ['blocksparse']
 
@@ -26,14 +27,14 @@ def blocksparse(X, block_sizes, pruning_rate):
         (tuple[tuple[int]], np.ndarray): shuffle orders and mask
     """
     ## prepare
-    X = np.abs(X) 
-    
-    dim_sizes = X.shape
+    X = torch.abs(X)
+
+    dim_sizes = X.size()
     num_dims = len(dim_sizes)
 
     block_sizes = [bs if bs > 0 else ds for bs, ds in zip(block_sizes, dim_sizes)]
     block_nums = [int((ds - 1) / bs) + 1 for bs, ds in zip(block_sizes, dim_sizes)]
-    orders = [np.arange(ds) for ds in dim_sizes]
+    orders = [torch.arange(ds) for ds in dim_sizes]
     num_blocks = np.prod(block_nums)
     num_pruned_blocks = int(num_blocks * pruning_rate)
 
@@ -42,25 +43,29 @@ def blocksparse(X, block_sizes, pruning_rate):
     while True:
         ## E step: choose block to be pruned
         # compute sum of each block
-        block_sums = X.reshape(tuple(itertools.chain.from_iterable((bn, bs) for bn, bs in zip(block_nums, block_sizes)))).sum(axis=tuple(2 * i + 1 for i in range(num_dims)))
+        block_sums = X.reshape(tuple(itertools.chain.from_iterable((bn, bs) for bn, bs in zip(block_nums, block_sizes))))
+        for i in range(num_dims):
+            block_sums = block_sums.sum(i + 1)
         # choose the blocks to be pruned
         block_mask = np.zeros_like(block_sums)
-        block_mask[np.unravel_index(block_sums.argsort(axis=None)[:num_pruned_blocks], dims=block_nums)] = 1
-        mask = (block_mask[tuple([slice(None), None] * num_dims)] * np.ones(block_sizes)[tuple([None, slice(None)] * num_dims)]).reshape(dim_sizes)
+        block_mask[np.unravel_index(block_sums.view(-1).sort()[1][:num_pruned_blocks], dims=block_nums)] = 1
+        mask = (block_mask[tuple([slice(None), None] * num_dims)] * torch.ones(*block_sizes)[tuple([None, slice(None)] * num_dims)]).reshape(dim_sizes)
 
         prev_pruned_sum = (X * mask).sum()
-        print("==> E-step: pruned sum is %f" % prev_pruned_sum) 
+        print("==> E-step: pruned sum is %f" % prev_pruned_sum)
 
         ## M step: determine the best order
         for axis in range(num_dims):
-            contraction_dims = [i for i in range(num_dims) if i != axis]
-            S = np.tensordot(X, mask, axes=(contraction_dims, contraction_dims))
+            # contraction_dims = [i for i in range(num_dims) if i != axis]
+            # S = np.tensordot(X, mask, axes=(contraction_dims, contraction_dims))
+            # torch does not support tensordot
+            S = torch.mm(X.transpose(0, axis).contiguous().view(X.size(axis), -1), mask.transpose(-1, axis).contiguous().view(-1, mask.size(axis)))
             while True:
                 D = S.diagonal()
-                C = (D[:, None] + D[None, :]) - (S + np.transpose(S))
-                if np.max(C, axis=None) < 1e-5:
+                C = (D[:, None] + D[None, :]) - (S + S.t())
+                if C.max() < 1e-5:
                     break
-                i, j = np.unravel_index(np.argmax(C, axis=None), C.shape)
+                i, j = np.unravel_index(C.argmax(), C.size())
 
                 ## swap i, j
                 S[[i,j],:] = S[[j,i],:]
@@ -68,7 +73,7 @@ def blocksparse(X, block_sizes, pruning_rate):
                 X[tuple([i,j] if k == axis else slice(None) for k in range(num_dims))] = X[tuple([j,i] if k == axis else slice(None) for k in range(num_dims))]
                 #print("====> Swap gain %f, pruned sum is %f" % (np.max(C, axis=None), (X * mask).sum()))
             print("===> axis %d, pruned sum is %f" % (axis, (X * mask).sum()))
-        
+
         pruned_sum = (X * mask).sum()
         print("==> M-step: pruned sum is %f" % pruned_sum)
         if prev_pruned_sum - pruned_sum < 1e-5:
