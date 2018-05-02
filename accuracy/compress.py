@@ -27,14 +27,14 @@ def blocksparse(X, block_sizes, pruning_rate):
         (tuple[tuple[int]], np.ndarray): shuffle orders and mask
     """
     ## prepare
-    X = torch.abs(X)
+    X = torch.abs(X).cuda()
 
     dim_sizes = X.size()
     num_dims = len(dim_sizes)
 
     block_sizes = [bs if bs > 0 else ds for bs, ds in zip(block_sizes, dim_sizes)]
     block_nums = [int((ds - 1) / bs) + 1 for bs, ds in zip(block_sizes, dim_sizes)]
-    orders = [torch.arange(ds) for ds in dim_sizes]
+    orders = [torch.arange(ds, dtype=torch.long) for ds in dim_sizes]
     num_blocks = np.prod(block_nums)
     num_pruned_blocks = int(num_blocks * pruning_rate)
 
@@ -47,9 +47,9 @@ def blocksparse(X, block_sizes, pruning_rate):
         for i in range(num_dims):
             block_sums = block_sums.sum(i + 1)
         # choose the blocks to be pruned
-        block_mask = np.zeros_like(block_sums)
+        block_mask = torch.zeros_like(block_sums)
         block_mask[np.unravel_index(block_sums.view(-1).sort()[1][:num_pruned_blocks], dims=block_nums)] = 1
-        mask = (block_mask[tuple([slice(None), None] * num_dims)] * torch.ones(*block_sizes)[tuple([None, slice(None)] * num_dims)]).reshape(dim_sizes)
+        mask = (block_mask[tuple([slice(None), None] * num_dims)] * torch.ones(*block_sizes).cuda()[tuple([None, slice(None)] * num_dims)]).reshape(dim_sizes)
 
         prev_pruned_sum = (X * mask).sum()
         print("==> E-step: pruned sum is %f" % prev_pruned_sum)
@@ -59,19 +59,34 @@ def blocksparse(X, block_sizes, pruning_rate):
             # contraction_dims = [i for i in range(num_dims) if i != axis]
             # S = np.tensordot(X, mask, axes=(contraction_dims, contraction_dims))
             # torch does not support tensordot
+            order = torch.arange(dim_sizes[axis], dtype=torch.long)
             S = torch.mm(X.transpose(0, axis).contiguous().view(X.size(axis), -1), mask.transpose(-1, axis).contiguous().view(-1, mask.size(axis)))
-            while True:
-                D = S.diagonal()
-                C = (D[:, None] + D[None, :]) - (S + S.t())
-                if C.max() < 1e-5:
-                    break
-                i, j = np.unravel_index(C.argmax(), C.size())
-
+            D = torch.diagonal(S)
+            C = (D[:, None] + D[None, :]) - (S + S.t())
+            i, j = np.unravel_index(C.argmax(), C.size())
+            while C.max() >= 1e-5:
                 ## swap i, j
-                S[[i,j],:] = S[[j,i],:]
-                orders[axis][[i,j]] = orders[axis][[j,i]]
-                X[tuple([i,j] if k == axis else slice(None) for k in range(num_dims))] = X[tuple([j,i] if k == axis else slice(None) for k in range(num_dims))]
-                #print("====> Swap gain %f, pruned sum is %f" % (np.max(C, axis=None), (X * mask).sum()))
+                S[[i,j], :] = S[[j,i], :]
+                order[[i, j]] = order[[j, i]]
+                #orders[axis][[i,j]] = orders[axis][[j,i]]
+                #X[tuple([i,j] if k == axis else slice(None) for k in range(num_dims))] = X[tuple([j,i] if k == axis else slice(None) for k in range(num_dims))]
+                print("====> Swap gain %f" % C.max())
+		
+                # update D and C
+                D[i] = S[i,i]
+                D[j] = S[j,j] 
+                c_i = D[i] + D - S[i, :].view(-1) - S[:, i].view(-1)
+                c_j = D[j] + D - S[j, :].view(-1) - S[:, j].view(-1)
+                C[i, :] = c_i
+                C[:, i] = c_i
+                C[j, :] = c_j
+                C[:, j] = c_j
+                #D = torch.diagonal(S)
+                #C[[i,j],:] = (D[[i,j], None] + D[None,:]) - (S[[i,j], :] + S.t()[[i,j], :])
+                #C[:,[i,j]] = (D[:,None] + D[None, [i,j]]) - (S[:, [i,j]] + S.t()[:, [i,j]]) 
+                i, j = np.unravel_index(C.argmax(), C.size())
+            orders[axis] = orders[axis][order]
+            X = X[tuple(order if k == axis else slice(None) for k in range(num_dims))]
             print("===> axis %d, pruned sum is %f" % (axis, (X * mask).sum()))
 
         pruned_sum = (X * mask).sum()
