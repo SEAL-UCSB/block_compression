@@ -56,9 +56,6 @@ def blocksparse(X, block_sizes, pruning_rate):
 
         ## M step: determine the best order
         for axis in range(num_dims):
-            # contraction_dims = [i for i in range(num_dims) if i != axis]
-            # S = np.tensordot(X, mask, axes=(contraction_dims, contraction_dims))
-            # torch does not support tensordot
             order = torch.arange(dim_sizes[axis], dtype=torch.long)
             S = torch.mm(X.transpose(0, axis).contiguous().view(X.size(axis), -1), mask.transpose(-1, axis).contiguous().view(-1, mask.size(axis)))
             D = torch.diagonal(S)
@@ -71,8 +68,7 @@ def blocksparse(X, block_sizes, pruning_rate):
                 print("====> Swap gain %f" % C.max())
 		
                 # update D and C
-                D[i] = S[i,i]
-                D[j] = S[j,j] 
+                D = torch.diagonal(S)
                 c_i = D[i] + D - S[i, :] - S[:, i]
                 c_j = D[j] + D - S[j, :] - S[:, j]
                 C[i, :] = c_i
