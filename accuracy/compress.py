@@ -68,22 +68,17 @@ def blocksparse(X, block_sizes, pruning_rate):
                 ## swap i, j
                 S[[i,j], :] = S[[j,i], :]
                 order[[i, j]] = order[[j, i]]
-                #orders[axis][[i,j]] = orders[axis][[j,i]]
-                #X[tuple([i,j] if k == axis else slice(None) for k in range(num_dims))] = X[tuple([j,i] if k == axis else slice(None) for k in range(num_dims))]
                 print("====> Swap gain %f" % C.max())
 		
                 # update D and C
                 D[i] = S[i,i]
                 D[j] = S[j,j] 
-                c_i = D[i] + D - S[i, :].view(-1) - S[:, i].view(-1)
-                c_j = D[j] + D - S[j, :].view(-1) - S[:, j].view(-1)
+                c_i = D[i] + D - S[i, :] - S[:, i]
+                c_j = D[j] + D - S[j, :] - S[:, j]
                 C[i, :] = c_i
                 C[:, i] = c_i
                 C[j, :] = c_j
                 C[:, j] = c_j
-                #D = torch.diagonal(S)
-                #C[[i,j],:] = (D[[i,j], None] + D[None,:]) - (S[[i,j], :] + S.t()[[i,j], :])
-                #C[:,[i,j]] = (D[:,None] + D[None, [i,j]]) - (S[:, [i,j]] + S.t()[:, [i,j]]) 
                 i, j = np.unravel_index(C.argmax(), C.size())
             orders[axis] = orders[axis][order]
             X = X[tuple(order if k == axis else slice(None) for k in range(num_dims))]
