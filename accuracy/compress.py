@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import itertools
 import torch
 import numpy as np
