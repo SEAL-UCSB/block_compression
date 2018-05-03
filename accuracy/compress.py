@@ -120,6 +120,6 @@ def blocksparse(X, block_sizes, pruning_rate):
 
     ## generate reverse mask
     for axis in range(num_dims):
-        mask[tuple(orders[dim] if dim == axis else slice(None) for dim in range(num_dims))] = mask 
+        mask[tuple(orders[dim] if dim == axis else slice(None) for dim in range(num_dims))] = mask.clone()
     return orders, mask
 
