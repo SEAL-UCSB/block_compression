@@ -154,7 +154,7 @@ def blocksparse_cpu(X, block_sizes, pruning_rate):
         block_mask = np.zeros_like(block_sums)
         if num_pruned_blocks > 0:
             block_mask[np.unravel_index(block_sums.flatten().argsort()[:num_pruned_blocks], dims=block_nums)] = 1
-        mask = (block_mask[tuple([slice(None), None] * num_dims)] * np.ones(*block_sizes)[tuple([None, slice(None)] * num_dims)]).reshape(dim_sizes)
+        mask = (block_mask[tuple([slice(None), None] * num_dims)] * np.ones(block_sizes)[tuple([None, slice(None)] * num_dims)]).reshape(dim_sizes)
 
         prev_pruned_sum = (X * mask).sum()
         print("==> E-step: pruned sum is %f" % prev_pruned_sum)
