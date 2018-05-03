@@ -5,7 +5,7 @@ from torch.nn.parameter import Parameter
 from torch.nn import functional as F
 import numpy as np
 
-from compress import blocksparse
+from compress import blocksparse, blocksparse_cpu
 
 __all__ = ['BlocksparseConv', 'BlocksparseLinear']
 
@@ -32,9 +32,18 @@ class BlocksparseConv(nn.Module):
         else:
             self.register_parameter('bias', None)
 
-        orders, mask = blocksparse(self.weight.data, block_sizes, pruning_rate)
-        mask = Variable(mask)
+        try:
+            W = self.weight.data
+            orders, mask = blocksparse(W, block_sizes, pruning_rate)
+            mask = Variable(mask)
+        except RuntimeError:
+            print("Runtime Error in GPU, try CPU version")
+            W = self.weight.data.numpy()
+            orders, mask = blocksparse_cpu(W, block_sizes, pruning_rate)
+            mask = Variable(torch.from_numpy(mask))
         self.register_buffer('mask', mask)
+        print("Pruned value: %f" % (self.mask * self.weight.abs()).sum())
+        print("Sparsity: %f, pruning_rate: %f" % (self.mask.sum() / len(self.mask.view(-1)), pruning_rate))
 
     def forward(self, x):
         weight = torch.mul(self.weight, self.mask)
@@ -56,9 +65,18 @@ class BlocksparseLinear(nn.Module):
         else:
             self.register_parameter('bias', None)
 
-        orders, mask = blocksparse(self.weight.data, block_sizes, pruning_rate)
-        mask = Variable(mask)
+        try:
+            W = self.weight.data
+            orders, mask = blocksparse(W, block_sizes, pruning_rate)
+            mask = Variable(mask)
+        except RuntimeError:
+            print("Runtime Error in GPU, try CPU version")
+            W = self.weight.data.numpy()
+            orders, mask = blocksparse_cpu(W, block_sizes, pruning_rate)
+            mask = Variable(torch.from_numpy(mask))
         self.register_buffer('mask', mask)
+        print("Pruned value: %f" % (self.mask * self.weight.abs()).sum())
+        print("Sparsity: %f, pruning_rate: %f" % (self.mask.sum() / len(self.mask.view(-1)), pruning_rate))
 
     def forward(self, x):
         weight = torch.mul(self.weight, self.mask)
