@@ -87,14 +87,14 @@ def main():
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             normalizer])),
-        batch_size=args.batch_size / args.batch_iter, shuffle=True, num_workers=args.workers, pin_memory=True)
+        batch_size=int(args.batch_size / args.batch_iter), shuffle=True, num_workers=args.workers, pin_memory=True)
     val_loader = torch.utils.data.DataLoader(
         datasets.ImageFolder(valdir, transforms.Compose([
             transforms.Resize(256),
             transforms.CenterCrop(224),
             transforms.ToTensor(),
             normalizer])),
-        batch_size=args.batch_size / args.batch_iter, shuffle=False, num_workers=args.workers, pin_memory=True)
+        batch_size=int(args.batch_size / args.batch_iter), shuffle=False, num_workers=args.workers, pin_memory=True)
 
     # optional evaluate only
     if args.evaluate:

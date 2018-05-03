@@ -62,9 +62,9 @@ def blocksparse(X, block_sizes, pruning_rate):
                 print("Skip axis %d" % axis)
                 continue
             order = torch.arange(dim_sizes[axis]).long()
-            S = torch.mm(X.transpose(0, axis).contiguous().view(X.size(axis), -1), mask.transpose(-1, axis).contiguous().view(-1, mask.size(axis)))
+            S = torch.mm(X.transpose(0, axis).contiguous().view(X.size(axis), -1), mask.transpose(0, axis).contiguous().view(mask.size(axis), -1).t())
             D = torch.diagonal(S)
-            G = (D[:, None] + D[None, :]) - (S + S.t())
+            G = D[:, None] + D[None, :] - S - S.t()
             G_maxes_v, G_maxes_i = torch.max(G, -1)
             G_max_v, G_max_i = torch.max(G_maxes_v, -1)
             i, j = G_max_i, G_maxes_i[G_max_i]
@@ -84,7 +84,13 @@ def blocksparse(X, block_sizes, pruning_rate):
                 G[:, j] = G_j
 
                 # update G_max
-                indices = torch.cat(((G_maxes_i == G_maxes_i[i]).nonzero(), (G_maxes_i == G_maxes_i[j]).nonzero()))
+                indices = torch.cat(((G_maxes_i == G_maxes_i[i]).nonzero(), (G_maxes_i == G_maxes_i[j]).nonzero())).view(-1)
+                if indices.size(0) > dim_sizes[axis] / 2:
+                    G_maxes_v, G_maxes_i = torch.max(G, -1)
+                    G_max_v, G_max_i = torch.max(G_maxes_v, -1)
+                    i, j = G_max_i, G_maxes_i[G_max_i]
+                    continue
+
                 G_maxes_v[indices], G_maxes_i[indices] = torch.max(G[indices, :], -1)
                 indices = (G_maxes_v < G[:, i])
                 G_maxes_v[indices] = G[indices, i]
@@ -94,6 +100,7 @@ def blocksparse(X, block_sizes, pruning_rate):
                 G_maxes_i[indices] = j
                 G_max_v, G_max_i = torch.max(G_maxes_v, -1)
                 i, j = G_max_i, G_maxes_i[G_max_i]
+
             orders[axis] = orders[axis][order]
             X = X[tuple(order if k == axis else slice(None) for k in range(num_dims))]
             print("===> axis %d, pruned sum is %f" % (axis, (X * mask).sum()))
