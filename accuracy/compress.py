@@ -64,7 +64,9 @@ def blocksparse(X, block_sizes, pruning_rate):
             order = torch.arange(dim_sizes[axis]).long()
             S = torch.mm(X.transpose(0, axis).contiguous().view(X.size(axis), -1), mask.transpose(0, axis).contiguous().view(mask.size(axis), -1).t())
             D = torch.diagonal(S)
-            G = D[:, None] + D[None, :] - S - S.t()
+            G = D[:, None] + D[None, :]
+            G -= S
+            G -= S.t()
             G_maxes_v, G_maxes_i = torch.max(G, -1)
             G_max_v, G_max_i = torch.max(G_maxes_v, -1)
             i, j = G_max_i, G_maxes_i[G_max_i]
@@ -100,6 +102,10 @@ def blocksparse(X, block_sizes, pruning_rate):
                 G_maxes_i[indices] = j
                 G_max_v, G_max_i = torch.max(G_maxes_v, -1)
                 i, j = G_max_i, G_maxes_i[G_max_i]
+            
+            del S
+            del G
+            torch.cuda.empty_cache()
 
             orders[axis] = orders[axis][order]
             X = X[tuple(order if k == axis else slice(None) for k in range(num_dims))]
