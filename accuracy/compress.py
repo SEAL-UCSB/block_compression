@@ -119,7 +119,7 @@ def blocksparse(X, block_sizes, pruning_rate):
         mask[tuple(orders[dim] if dim == axis else slice(None) for dim in range(num_dims))] = mask.clone()
     mask = mask.cpu()
     torch.cuda.empty_cache()
-    return orders, mask
+    return orders, 1 - mask
 
 
 def blocksparse_cpu(X, block_sizes, pruning_rate):
@@ -222,5 +222,5 @@ def blocksparse_cpu(X, block_sizes, pruning_rate):
     ## generate reverse mask
     for axis in range(num_dims):
         mask[tuple(orders[dim] if dim == axis else slice(None) for dim in range(num_dims))] = mask.copy()
-    return orders, mask
+    return orders, 1 - mask
 

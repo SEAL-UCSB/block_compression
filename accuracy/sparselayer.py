@@ -42,8 +42,7 @@ class BlocksparseConv(nn.Module):
             orders, mask = blocksparse_cpu(W, block_sizes, pruning_rate)
             mask = Variable(torch.from_numpy(mask))
         self.register_buffer('mask', mask)
-        print("Pruned value: %f" % (self.mask * self.weight.abs()).sum())
-        print("Sparsity: %f, pruning_rate: %f" % (self.mask.sum() / len(self.mask.view(-1)), pruning_rate))
+        print("Sparsity: %f, pruning_rate: %f" % (1 - self.mask.sum() / len(self.mask.view(-1)), pruning_rate))
 
     def forward(self, x):
         weight = torch.mul(self.weight, self.mask)
@@ -75,8 +74,7 @@ class BlocksparseLinear(nn.Module):
             orders, mask = blocksparse_cpu(W, block_sizes, pruning_rate)
             mask = Variable(torch.from_numpy(mask))
         self.register_buffer('mask', mask)
-        print("Pruned value: %f" % (self.mask * self.weight.abs()).sum())
-        print("Sparsity: %f, pruning_rate: %f" % (self.mask.sum() / len(self.mask.view(-1)), pruning_rate))
+        print("Sparsity: %f, pruning_rate: %f" % (1 - self.mask.sum() / len(self.mask.view(-1)), pruning_rate))
 
     def forward(self, x):
         weight = torch.mul(self.weight, self.mask)
