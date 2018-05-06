@@ -70,7 +70,7 @@ def blocksparse(X, block_sizes, pruning_rate):
             G_maxes_v, G_maxes_i = torch.max(G, -1)
             G_max_v, G_max_i = torch.max(G_maxes_v, -1)
             i, j = G_max_i, G_maxes_i[G_max_i]
-            while G_max_v >= 1e-5:
+            while G_max_v >= 1e-3:
                 ## swap i, j
                 S[[i,j], :] = S[[j,i], :]
                 order[[i, j],] = order[[j, i],]
@@ -109,7 +109,7 @@ def blocksparse(X, block_sizes, pruning_rate):
 
         pruned_sum = (X * mask).sum()
         print("==> M-step: pruned sum is %f" % pruned_sum)
-        if prev_pruned_sum - pruned_sum < 1e-5:
+        if prev_pruned_sum - pruned_sum < 1e-3:
             break
         else:
             prev_pruned_sum = pruned_sum
@@ -174,7 +174,7 @@ def blocksparse_cpu(X, block_sizes, pruning_rate):
             G_maxes_v, G_maxes_i = np.max(G, -1)
             G_max_v, G_max_i = np.max(G_maxes_v, -1)
             i, j = G_max_i, G_maxes_i[G_max_i]
-            while G_max_v >= 1e-5:
+            while G_max_v >= 1e-3:
                 ## swap i, j
                 S[[i,j], :] = S[[j,i], :]
                 order[[i, j],] = order[[j, i],]
@@ -214,7 +214,7 @@ def blocksparse_cpu(X, block_sizes, pruning_rate):
 
         pruned_sum = (X * mask).sum()
         print("==> M-step: pruned sum is %f" % pruned_sum)
-        if prev_pruned_sum - pruned_sum < 1e-5:
+        if prev_pruned_sum - pruned_sum < 1e-3:
             break
         else:
             prev_pruned_sum = pruned_sum
