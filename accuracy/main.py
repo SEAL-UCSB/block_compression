@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import argparse
 from collections import namedtuple
 import json
@@ -161,7 +163,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
                 "Time %0.3f (%0.3f)\t" % (batch_time.val, batch_time.avg) + \
                 "Loss %0.4f (%0.4f)\t" % (losses.val, losses.avg) + \
                 "Prec@1 %0.3f (%0.3f)\t" % (top1.val, top1.avg) + \
-                "Prec@5 %0.3f (%0.3f)\t" % (top5.val, top5.avg))
+                "Prec@5 %0.3f (%0.3f)\t" % (top5.val, top5.avg), end='\r')
 
 def validate(val_loader, model, criterion):
     batch_time = AverageMeter()
@@ -193,7 +195,7 @@ def validate(val_loader, model, criterion):
                     "Time %0.3f (%0.3f)\t" % (batch_time.val, batch_time.avg) + \
                     "Loss %0.4f (%0.4f)\t" % (losses.val, losses.avg) + \
                     "Prec@1 %0.3f (%0.3f)\t" % (top1.val, top1.avg) + \
-                    "Prec@5 %0.3f (%0.3f)\t" % (top5.val, top5.avg))
+                    "Prec@5 %0.3f (%0.3f)\t" % (top5.val, top5.avg), end='\r')
 
         print(" * Prec@1 %0.3f Prec@5 %0.3f" % (top1.avg, top5.avg))
     return top1.avg
