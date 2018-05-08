@@ -26,6 +26,10 @@ def profile(bs, iw, ih, ic, oc, kw, kh, bi, bo, sp):
     Returns:
 	(float, int): actual sparsity and execution time in us
     """
+    if bi > ic:
+        bi = ic
+    if bo > oc:
+        bo = oc
     num_input_blocks = ic / bi
     num_output_blocks = oc / bo
     num_blocks = num_input_blocks * num_output_blocks
@@ -88,10 +92,36 @@ def profile(bs, iw, ih, ic, oc, kw, kh, bi, bo, sp):
 
     return actual_sparsity, conv_time + gather_time
 
-with open('conv_exec_time.csv', 'w') as f:
-    f.write('block_size, sparsity, execution_time\n')
-    for block_size in (8, 16, 32, 64, 128, 256, 512): 
-    	for sparsity in (0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9):
-    	    actual_sparsity, execution_time = profile(bs=64, iw=28, ih=28, ic=512, oc=512, kw=3, kh=3, bi=int(round(block_size / 9.)), bo=block_size, sp=sparsity)
-	    f.write('%d, %f, %d\n' % (block_size, actual_sparsity, execution_time))
+alexnet_config = {
+    "conv1": [56, 56, 3, 64, 11, 11],
+    "conv2": [28, 28, 64, 192, 5, 5],
+    "conv3": [14, 14, 192, 384, 3, 3],
+    "conv4": [14, 14, 384, 256, 3, 3],
+    "conv5": [14, 14, 256, 256, 3, 3]
+}
+
+vgg16_config = {
+    "conv1.1": [224, 224, 3, 64, 3, 3],
+    "conv1.2": [224, 224, 64, 64, 3, 3],
+    "conv2.1": [112, 112, 64, 128, 3, 3],
+    "conv2.2": [112, 112, 128, 128, 3, 3],
+    "conv3.1": [56, 56, 128, 256, 3, 3],
+    "conv3.2": [56, 56, 256, 256, 3, 3],
+    "conv3.3": [56, 56, 256, 256, 3, 3],
+    "conv4.1": [28, 28, 256, 512, 3, 3],
+    "conv4.2": [28, 28, 512, 512, 3, 3],
+    "conv4.3": [28, 28, 512, 512, 3, 3],
+    "conv5.1": [14, 14, 512, 512, 3, 3],
+    "conv5.2": [14, 14, 512, 512, 3, 3],
+    "conv5.3": [14, 14, 512, 512, 3, 3]
+}
+
+for k, v in vgg16_config.items():
+    print('process %s' % (k))
+    with open('vgg16_%s.csv' % k, 'w') as f:
+        f.write('block_size, sparsity, execution_time\n')
+        for block_size in (8, 16, 32, 64): 
+    	    for sparsity in (0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9):
+    	        actual_sparsity, execution_time = profile(bs=64, iw=v[0], ih=v[1], ic=v[2], oc=v[3], kw=v[4], kh=v[5], bi=int(round(block_size / 9.)), bo=block_size, sp=sparsity)
+	        f.write('%d, %f, %d\n' % (block_size, actual_sparsity, execution_time))
 	    print('%d, %f, %d' % (block_size, actual_sparsity, execution_time))
