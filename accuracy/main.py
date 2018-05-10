@@ -37,6 +37,7 @@ parser.add_argument('--weight-decay', '--wd', default=1e-4, type=float, metavar=
 parser.add_argument('--print-freq', '-p', default=10, type=int, metavar='N', help='print frequency')
 parser.add_argument('--resume', default='', type=str, metavar='PATH', help='path to the latest checkpoint')
 parser.add_argument('--evaluate', '-e', dest='evaluate', action='store_true', help='only evaluate model on validation set')
+parser.add_argument('--no-shuffle', dest='no_shuffle', action='store_true', help='do not shuffle')
 parser.add_argument('--prefix', default='default', type=str, metavar='PREFIX', help='prefix of the checkpoints and best models')
 parser.add_argument('--lr-epochs', default=10, type=int, metavar='N', help='epochs to reduce the learning rate')
 
@@ -54,7 +55,7 @@ def main():
     print("=> load pre-trained model %s" % args.arch)
     model = models.__dict__[args.arch](pretrained=True)
     print("=> create sparse model")
-    model = BlocksparseModel(model, configuration[args.arch].block_sizes, configuration[args.arch].pruning_rates)
+    model = BlocksparseModel(model, configuration[args.arch].block_sizes, configuration[args.arch].pruning_rates, not args.no_shuffle)
     if torch.cuda.device_count() > 1:
         print("Let's use", torch.cuda.device_count(), "GPUs!")
         model = nn.DataParallel(model)
