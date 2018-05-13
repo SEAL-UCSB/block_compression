@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from blocksparse.conv import BlocksparseConv
 
 import tensorflow as tf
@@ -8,7 +10,8 @@ import json
 import sys
 import os
 import random
-
+from collections import namedtuple
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 def profile(bs, iw, ih, ic, oc, kw, kh, bi, bo, sp):
     """Get the execution time of blocksparse
     Args:
@@ -115,13 +118,52 @@ vgg16_config = {
     "conv5.2": [14, 14, 512, 512, 3, 3],
     "conv5.3": [14, 14, 512, 512, 3, 3]
 }
-
+"""
 for k, v in vgg16_config.items():
     print('process %s' % (k))
     with open('vgg16_%s.csv' % k, 'w') as f:
         f.write('block_size, sparsity, execution_time\n')
-        for block_size in (8, 16, 32, 64): 
+        for block_size in (8, 16, 32, 64, 128, 256): 
+            if block_size > v[3] or block_size > v[3]:
+                 break
     	    for sparsity in (0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9):
-    	        actual_sparsity, execution_time = profile(bs=64, iw=v[0], ih=v[1], ic=v[2], oc=v[3], kw=v[4], kh=v[5], bi=int(round(block_size / 9.)), bo=block_size, sp=sparsity)
+    	        actual_sparsity, execution_time = profile(bs=64, iw=v[0], ih=v[1], ic=v[2], oc=v[3], kw=v[4], kh=v[5], bi=3, bo=block_size, sp=sparsity)
 	        f.write('%d, %f, %d\n' % (block_size, actual_sparsity, execution_time))
-	    print('%d, %f, %d' % (block_size, actual_sparsity, execution_time))
+	    	print('%d, %f, %d' % (block_size, actual_sparsity, execution_time))
+"""
+vgg16_config = [ 
+    [224, 224, 3, 64, 3, 3],
+    [224, 224, 64, 64, 3, 3],
+    [112, 112, 64, 128, 3, 3],
+    [112, 112, 128, 128, 3, 3],
+    [56, 56, 128, 256, 3, 3],
+    [56, 56, 256, 256, 3, 3],
+    [56, 56, 256, 256, 3, 3],
+    [28, 28, 256, 512, 3, 3],
+    [28, 28, 512, 512, 3, 3],
+    [28, 28, 512, 512, 3, 3],
+    [14, 14, 512, 512, 3, 3],
+    [14, 14, 512, 512, 3, 3],
+    [14, 14, 512, 512, 3, 3]
+]
+
+# profile config
+config_fn = sys.argv[1]
+Config = namedtuple('Config', ['block_sizes', 'pruning_rates'])
+with open(config_fn, 'r') as f:
+    configuration = json.load(f)
+configuration = Config(**configuration['vgg16_bn'])
+
+total = 0
+for i in range(11):
+    l = vgg16_config[i]
+    b = configuration.block_sizes[i]
+#    b = [1, 1]
+    s = configuration.pruning_rates[i]
+    _, execution_time = profile(bs=64, iw=l[0], ih=l[1], ic=l[2], oc=l[3], kw=l[4], kh=l[5], bi=b[0] if b[0] > 0 else l[2], bo=b[1] if b[1] > 0 else l[3], sp=s)
+    execution_time *= 1e-6
+    total += execution_time
+    print('===> %f' % execution_time)
+
+print(total)
+
