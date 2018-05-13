@@ -6,7 +6,7 @@ import numpy as np
 
 __all__ = ['blocksparse']
 
-def blocksparse(X, block_sizes, pruning_rate):
+def blocksparse(X, block_sizes, pruning_rate, shuffle=True):
     """Blocksparse pruning with pytorch on GPU
     
     For input tensor X, we use an EM algorithm to determine the best shuffling order.
@@ -24,6 +24,7 @@ def blocksparse(X, block_sizes, pruning_rate):
         x (np.ndarray): a tensor to be pruned.
         block_sizes (tuple[int]): block sizes for each dimension of 'x'.
         pruning_rate (float): pruning rate.
+        shuffle (bool): Shuffle or not.
 
     Returns:
         (tuple[tuple[int]], np.ndarray): shuffle orders and mask
@@ -55,6 +56,9 @@ def blocksparse(X, block_sizes, pruning_rate):
 
         prev_pruned_sum = (X * mask).sum()
         print("==> E-step: pruned sum is %f" % prev_pruned_sum)
+
+        if not shuffle:
+            return orders, 1 - mask
 
         ## M step: determine the best order
         for axis in range(num_dims):

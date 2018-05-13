@@ -6,7 +6,7 @@ from sparselayer import BlocksparseConv, BlocksparseLinear
 __all__ = ['BlocksparseModel']
 
 class BlocksparseModel(nn.Module):
-    def __init__(self, model, block_sizes, pruning_rates):
+    def __init__(self, model, block_sizes, pruning_rates, shuffle=True):
         super(BlocksparseModel, self).__init__()
 
         features = []
@@ -14,7 +14,7 @@ class BlocksparseModel(nn.Module):
         for layer in model.features:
             print("=> converting layer %s" % str(layer))
             if type(layer) is nn.Conv2d:
-                features.append(BlocksparseConv(layer, block_sizes[sparse_index], pruning_rates[sparse_index]))
+                features.append(BlocksparseConv(layer, block_sizes[sparse_index], pruning_rates[sparse_index], shuffle))
                 sparse_index += 1
             else:
                 features.append(layer)
@@ -23,7 +23,7 @@ class BlocksparseModel(nn.Module):
         for layer in model.classifier:
             print("=> converting layer %s" % str(layer))
             if type(layer) is nn.Linear:
-                classifier.append(BlocksparseLinear(layer, block_sizes[sparse_index], pruning_rates[sparse_index]))
+                classifier.append(BlocksparseLinear(layer, block_sizes[sparse_index], pruning_rates[sparse_index], shuffle))
                 sparse_index += 1
             else:
                 classifier.append(layer)

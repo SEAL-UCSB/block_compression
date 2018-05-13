@@ -10,7 +10,7 @@ from compress import blocksparse, blocksparse_cpu
 __all__ = ['BlocksparseConv', 'BlocksparseLinear']
 
 class BlocksparseConv(nn.Module):
-    def __init__(self, conv2d, block_sizes, pruning_rate):
+    def __init__(self, conv2d, block_sizes, pruning_rate, shuffle=True):
         super(BlocksparseConv, self).__init__()
 
         self.block_sizes = block_sizes
@@ -34,7 +34,7 @@ class BlocksparseConv(nn.Module):
 
         try:
             W = self.weight.data
-            orders, mask = blocksparse(W, block_sizes, pruning_rate)
+            orders, mask = blocksparse(W, block_sizes, pruning_rate, shuffle)
             mask = Variable(mask)
         except RuntimeError:
             print("Runtime Error in GPU, try CPU version")
@@ -50,7 +50,7 @@ class BlocksparseConv(nn.Module):
 
 
 class BlocksparseLinear(nn.Module):
-    def __init__(self, linear, block_sizes, pruning_rate):
+    def __init__(self, linear, block_sizes, pruning_rate, shuffle=True):
         super(BlocksparseLinear, self).__init__()
         
         self.block_sizes = block_sizes
@@ -66,7 +66,7 @@ class BlocksparseLinear(nn.Module):
 
         try:
             W = self.weight.data
-            orders, mask = blocksparse(W, block_sizes, pruning_rate)
+            orders, mask = blocksparse(W, block_sizes, pruning_rate, shuffle)
             mask = Variable(mask)
         except RuntimeError:
             print("Runtime Error in GPU, try CPU version")
