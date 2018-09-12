@@ -125,7 +125,9 @@ def blocksparse(X, block_sizes, pruning_rate, shuffle=True):
     torch.cuda.empty_cache()
     return orders, 1 - mask
 
-
+### IMPORTANT ###
+# This cpu implementation has bugs.
+# Avoid using cpu implementation.
 def blocksparse_cpu(X, block_sizes, pruning_rate):
     """CPU version Blocksparse pruning with numpy
 
