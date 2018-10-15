@@ -29,4 +29,4 @@ It provide the block size for each dimension of each layer and the pruning rates
 Pruning codes are implemented on GPU.
 It takes about 1 minute and 12GB GPU memory to prune VGG16.
 Although I wrote the CPU implementations as well, it still has some bugs and takes really a long time to run.
-Make sure your GPU device provides enought memory.
+Make sure your GPU device provides enough memory.
