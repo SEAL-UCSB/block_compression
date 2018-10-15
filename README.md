@@ -25,7 +25,7 @@ You should specify the path to ImageNet dataset, the model architecture used (in
 We have provide many configuration files (all the json files).
 It provide the block size for each dimension of each layer and the pruning rates.
 
-### Important nodes
+### Important notes
 Pruning codes are implemented on GPU.
 It takes about 1 minute and 12GB GPU memory to prune VGG16.
 Although I wrote the CPU implementations as well, it still has some bugs and takes really a long time to run.
