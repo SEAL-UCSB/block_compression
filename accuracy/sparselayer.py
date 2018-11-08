@@ -32,15 +32,9 @@ class BlocksparseConv(nn.Module):
         else:
             self.register_parameter('bias', None)
 
-        try:
-            W = self.weight.data
-            orders, mask = blocksparse(W, block_sizes, pruning_rate, shuffle)
-            mask = Variable(mask)
-        except RuntimeError:
-            print("Runtime Error in GPU, try CPU version")
-            W = self.weight.data.numpy()
-            orders, mask = blocksparse_cpu(W, block_sizes, pruning_rate)
-            mask = Variable(torch.from_numpy(mask))
+        W = self.weight.data
+        orders, mask = blocksparse(W, block_sizes, pruning_rate, shuffle)
+        mask = Variable(mask)
         self.register_buffer('mask', mask)
         print("Sparsity: %f, pruning_rate: %f" % (1 - self.mask.sum() / len(self.mask.view(-1)), pruning_rate))
 
@@ -64,15 +58,9 @@ class BlocksparseLinear(nn.Module):
         else:
             self.register_parameter('bias', None)
 
-        try:
-            W = self.weight.data
-            orders, mask = blocksparse(W, block_sizes, pruning_rate, shuffle)
-            mask = Variable(mask)
-        except RuntimeError:
-            print("Runtime Error in GPU, try CPU version")
-            W = self.weight.data.numpy()
-            orders, mask = blocksparse_cpu(W, block_sizes, pruning_rate)
-            mask = Variable(torch.from_numpy(mask))
+        W = self.weight.data
+        orders, mask = blocksparse(W, block_sizes, pruning_rate, shuffle)
+        mask = Variable(mask)
         self.register_buffer('mask', mask)
         print("Sparsity: %f, pruning_rate: %f" % (1 - self.mask.sum() / len(self.mask.view(-1)), pruning_rate))
 
